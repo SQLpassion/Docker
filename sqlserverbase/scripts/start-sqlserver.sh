@@ -1,11 +1,10 @@
-# load up environment variables
+# Export the necessary environment variables
 export $(xargs < /tmp/sapassword.env)
 export $(xargs < /tmp/sqlcmd.env)
 export PATH=$PATH:/opt/mssql-tools/bin
 
-# set the configs
+# Set the SQL Server configuration
 cp /tmp/mssql.conf /var/opt/mssql/mssql.conf
 
-# startup, wait for it to finish starting
-# then run the setup script
+# Start up SQL Server, wait for it, and then restore the sample databases
 /opt/mssql/bin/sqlservr & sleep 20 & /tmp/configure.sh

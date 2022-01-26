@@ -1,24 +1,31 @@
-FROM mcr.microsoft.com/mssql/server:2019-latest as builder
+# The customized image is based on SQL Server 2019
+FROM mcr.microsoft.com/mssql/server:2019-latest
 
-# switch to root to a bunch of stuff that requires elevated privs
+# Switch to the root user
 USER root
 
-# set the pwd and chown to the service account
+# Sets the pwd and chown to the service account of SQL Server
 WORKDIR /tmp
 RUN chown mssql /tmp
 
-# copy scripts and make bash files executable
-# use copy instead of add, it's safer apparently
+# Copy the scripts and the sample databases into the image
 COPY sql /tmp/
 COPY scripts /tmp/
+COPY sample-databases /tmp/
+
+# Mark the scripts as executable
 RUN chmod +x /tmp/*.sh
 
-# switch to user mssql or the container will fail
+# Convert CRLF to LF in case Windows or VS Code changed it
+RUN find . -type f \( -name "*.sql" -o -name "*.env" -o -name "*.sh" \) -exec sed -i 's/\r$//' {} \;
+
+# Switch to user mssql or the container will fail
 USER mssql
 
-# run initial setup scripts
+# Run the initial setup script
 RUN /bin/bash /tmp/start-sqlserver.sh
 
+# Label everything
 LABEL org.opencontainers.image.vendor="SQLpassion"
 LABEL org.opencontainers.image.title="SQLpassion"
 LABEL org.opencontainers.image.url=https://www.sqlpassion.at

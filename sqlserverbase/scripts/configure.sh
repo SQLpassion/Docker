@@ -1,4 +1,4 @@
-# loop until sql server is up and ready
+# Loop until SQL Server is up and running
 for i in {1..50};
 do
     sqlcmd -S localhost -d master -Q "SELECT @@VERSION"
