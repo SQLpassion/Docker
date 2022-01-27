@@ -1,0 +1,26 @@
+version: '3.7'
+services:
+  initiator-service:
+    restart: on-failure
+    networks:
+      - localnet
+    container_name: initiator-service
+    hostname: initiator-service
+    image: sqlpassion/initiator-service:2019-latest
+    ports:
+      - "1433:1433"
+    env_file:
+      - initiator-service/sql/sapassword.env
+  target-service:
+    restart: on-failure
+    networks:
+      - localnet
+    container_name: target-service
+    hostname: target-service
+    image: sqlpassion/target-service:2019-latest
+    ports:
+      - "1434:1433"
+    env_file:
+      - target-service/sql/sapassword.env
+networks:
+  localnet: null
