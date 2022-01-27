@@ -55,75 +55,75 @@ CREATE TABLE ProcessedMessages
 )
 GO
 
+-- These settings are needed, so that the activated stored procedure works...
+-- Otherwise we get an error, and the queue is finally deactivated, because of the poison message handling.
+SET ANSI_WARNINGS ON
+GO
+
+SET ANSI_PADDING ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 -- Create a stored procedure that processes the incoming request messages
 CREATE PROCEDURE ProcessRequestMessages
 AS
-DECLARE @ch UNIQUEIDENTIFIER
-DECLARE @messagetypename NVARCHAR(256)
-DECLARE	@messagebody XML
-DECLARE @responsemessage XML;
+	DECLARE @ch UNIQUEIDENTIFIER
+	DECLARE @messagetypename NVARCHAR(256)
+	DECLARE	@messagebody XML
+	DECLARE @responsemessage XML;
 
-WHILE (1=1)
+	WHILE (1 = 1)
 	BEGIN
-	BEGIN TRY
-			BEGIN TRANSACTION
+		BEGIN TRANSACTION
 
-			WAITFOR (
-				RECEIVE TOP(1)
-					@ch = conversation_handle,
-					@messagetypename = message_type_name,
-					@messagebody = CAST(message_body AS XML)
-				FROM TargetQueue
-			), TIMEOUT 60000
+		WAITFOR (
+			RECEIVE TOP(1)
+				@ch = conversation_handle,
+				@messagetypename = message_type_name,
+				@messagebody = CAST(message_body AS XML)
+			FROM TargetQueue
+		), TIMEOUT 60000
 
-			IF (@@ROWCOUNT = 0)
-			BEGIN
-		ROLLBACK TRANSACTION
-		BREAK
-	END
-
+		IF (@@ROWCOUNT > 0)
+		BEGIN
 			IF (@messagetypename = 'RequestMessage')
 			BEGIN
-		-- Store the received request message in a table
-		INSERT INTO ProcessedMessages
-			(ID, MessageBody, ServiceName)
-		VALUES
-			(NEWID(), @messagebody, 'TargetService')
+				-- Store the received request message in a table
+				INSERT INTO ProcessedMessages (ID, MessageBody, ServiceName) VALUES (NEWID(), @messagebody, 'TargetService')
 
-		-- Construct the response message
-		SET @responsemessage = '<HelloWorldResponse>' + @messagebody.value('/HelloWorldRequest[1]', 'NVARCHAR(MAX)') + '</HelloWorldResponse>';
+				-- Construct the response message
+				SET @responsemessage = '<HelloWorldResponse>' + @messagebody.value('/HelloWorldRequest[1]', 'NVARCHAR(MAX)') + '</HelloWorldResponse>';
 
-		-- Send the response message back to the initiating service
-		SEND ON CONVERSATION @ch MESSAGE TYPE ResponseMessage (@responsemessage);
+				-- Send the response message back to the initiating service
+				SEND ON CONVERSATION @ch MESSAGE TYPE ResponseMessage (@responsemessage);
 
-		-- End the conversation on the target's side
-		END CONVERSATION @ch;
-	END
+				-- End the conversation on the target's side
+				END CONVERSATION @ch;
+			END
 
 			IF (@messagetypename = 'http://schemas.microsoft.com/SQL/ServiceBroker/EndDialog')
 			BEGIN
-		-- End the conversation
-		END CONVERSATION @ch;
-	END
+				-- End the conversation
+				END CONVERSATION @ch;
+			END
+		END
 
-			COMMIT TRANSACTION
-		END TRY
-		BEGIN CATCH
-			ROLLBACK TRANSACTION
-		END CATCH
-END
+		COMMIT TRANSACTION
+	END
 GO
 
 -- Configure the stored procedure as a service program on the queue
--- ALTER QUEUE TargetQueue
--- WITH ACTIVATION
--- (
--- 	STATUS = ON,
--- 	PROCEDURE_NAME = ProcessRequestMessages,
--- 	MAX_QUEUE_READERS = 1,
--- 	EXECUTE AS SELF
--- )
--- GO
+ALTER QUEUE TargetQueue
+WITH ACTIVATION
+(
+	STATUS = ON,
+	PROCEDURE_NAME = ProcessRequestMessages,
+	MAX_QUEUE_READERS = 1,
+	EXECUTE AS OWNER
+)
+GO
 
 -- ***************
 -- Security Setup 

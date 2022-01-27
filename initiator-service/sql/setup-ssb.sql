@@ -55,65 +55,65 @@ CREATE TABLE ProcessedMessages
 )
 GO
 
+-- These settings are needed, so that the activated stored procedure works...
+-- Otherwise we get an error, and the queue is finally deactivated, because of the poison message handling.
+SET ANSI_WARNINGS ON
+GO
+
+SET ANSI_PADDING ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 -- Create a stored procedure that processes the incoming response and EndDialog messages
 CREATE PROCEDURE ProcessResponseMessages
 AS
-DECLARE @ch UNIQUEIDENTIFIER
-DECLARE @messagetypename NVARCHAR(256)
-DECLARE	@messagebody XML;
+	DECLARE @ch UNIQUEIDENTIFIER -- conversation handle
+	DECLARE @messagetypename NVARCHAR(256)
+	DECLARE	@messagebody XML;
 
-WHILE (1 = 1)
+	WHILE (1 = 1)
 	BEGIN
-	BEGIN TRY
-			BEGIN TRANSACTION
+		BEGIN TRANSACTION
 
-			WAITFOR (
-				RECEIVE TOP(1)
-					@ch = conversation_handle,
-					@messagetypename = message_type_name,
-					@messagebody = CAST(message_body AS XML)
-				FROM InitiatorQueue
-			), TIMEOUT 60000
+		WAITFOR (
+			RECEIVE TOP(1)
+				@ch = conversation_handle,
+				@messagetypename = message_type_name,
+				@messagebody = CAST(message_body AS XML)
+			FROM InitiatorQueue
+		), TIMEOUT 60000
 
-			IF (@@ROWCOUNT = 0)
-			BEGIN
-		ROLLBACK TRANSACTION
-		BREAK
-	END
-
+		IF (@@ROWCOUNT > 0)
+		BEGIN
 			IF (@messagetypename = 'ResponseMessage')
 			BEGIN
-		-- Store the received response) message in a table
-		INSERT INTO ProcessedMessages
-			(ID, MessageBody, ServiceName)
-		VALUES
-			(NEWID(), @messagebody, 'InitiatorService')
-	END
+				-- Store the received response) message in a table
+				INSERT INTO ProcessedMessages (ID, MessageBody, ServiceName) VALUES (NEWID(), @messagebody, 'InitiatorService')
+			END
 
 			IF (@messagetypename = 'http://schemas.microsoft.com/SQL/ServiceBroker/EndDialog')
 			BEGIN
-		-- End the conversation on the initiator's side
-		END CONVERSATION @ch;
-	END
+				-- End the conversation on the initiator's side
+				END CONVERSATION @ch;
+			END
+		END
 
-			COMMIT TRANSACTION
-		END TRY
-		BEGIN CATCH
-			ROLLBACK TRANSACTION
-		END CATCH
-END
+		COMMIT TRANSACTION
+	END
 GO
 
 -- -- Configure the stored procedure as a service program on the queue
--- ALTER QUEUE InitiatorQueue
--- WITH ACTIVATION
--- (
--- 	STATUS = ON,
--- 	PROCEDURE_NAME = ProcessResponseMessages,
--- 	MAX_QUEUE_READERS = 1,
--- 	EXECUTE AS SELF
--- )
--- GO
+ALTER QUEUE InitiatorQueue
+WITH ACTIVATION
+(
+	STATUS = ON,
+	PROCEDURE_NAME = ProcessResponseMessages,
+	MAX_QUEUE_READERS = 1,
+	EXECUTE AS OWNER
+)
+GO
 
 -- Create a stored procedure that sends a message from the InitiatorService to the TargetService
 CREATE PROCEDURE SendMessageToTargetService

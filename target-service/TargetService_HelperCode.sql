@@ -130,31 +130,28 @@ AS
 				FROM TargetQueue
 			), TIMEOUT 60000
 
-			IF (@@ROWCOUNT = 0)
+			IF (@@ROWCOUNT > 0)
 			BEGIN
-				ROLLBACK TRANSACTION
-				BREAK
-			END
+				IF (@messagetypename = 'RequestMessage')
+				BEGIN
+					-- Store the received request message in a table
+					INSERT INTO ProcessedMessages (ID, MessageBody, ServiceName) VALUES (NEWID(), @messagebody, 'TargetService')
 
-			IF (@messagetypename = 'RequestMessage')
-			BEGIN
-				-- Store the received request message in a table
-				INSERT INTO ProcessedMessages (ID, MessageBody, ServiceName) VALUES (NEWID(), @messagebody, 'TargetService')
+					-- Construct the response message
+					SET @responsemessage = '<HelloWorldResponse>' + @messagebody.value('/HelloWorldRequest[1]', 'NVARCHAR(MAX)') + '</HelloWorldResponse>';
 
-				-- Construct the response message
-				SET @responsemessage = '<HelloWorldResponse>' + @messagebody.value('/HelloWorldRequest[1]', 'NVARCHAR(MAX)') + '</HelloWorldResponse>';
+					-- Send the response message back to the initiating service
+					SEND ON CONVERSATION @ch MESSAGE TYPE ResponseMessage (@responsemessage);
 
-				-- Send the response message back to the initiating service
-				SEND ON CONVERSATION @ch MESSAGE TYPE ResponseMessage (@responsemessage);
+					-- End the conversation on the target's side
+					END CONVERSATION @ch;
+				END
 
-				-- End the conversation on the target's side
-				END CONVERSATION @ch;
-			END
-
-			IF (@messagetypename = 'http://schemas.microsoft.com/SQL/ServiceBroker/EndDialog')
-			BEGIN
-				-- End the conversation
-				END CONVERSATION @ch;
+				IF (@messagetypename = 'http://schemas.microsoft.com/SQL/ServiceBroker/EndDialog')
+				BEGIN
+					-- End the conversation
+					END CONVERSATION @ch;
+				END
 			END
 
 			COMMIT TRANSACTION
@@ -168,10 +165,7 @@ GO
 ALTER QUEUE TargetQueue
 WITH ACTIVATION
 (
-	STATUS = OFF
-)
-
-,
+	STATUS = ON,
 	PROCEDURE_NAME = ProcessRequestMessages,
 	MAX_QUEUE_READERS = 1,
 	EXECUTE AS SELF
@@ -186,3 +180,17 @@ status = ON
 select is_receive_enabled, * from sys.service_queues
 
 drop queue targetqueue
+
+select * from sys.dm_broker_queue_monitors
+
+select * from sys.dm_broker_activated_tasks
+
+ALTER QUEUE TargetQueue
+
+WITH ACTIVATION
+
+(
+
+STATUS = OFF
+
+);
