@@ -1,3 +1,14 @@
+-- These settings are needed, so that the activated stored procedure works...
+-- Otherwise we get an error, and the queue is finally deactivated, because of the poison message handling.
+SET ANSI_WARNINGS ON
+GO
+
+SET ANSI_PADDING ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
 USE master
 GO
 
@@ -53,17 +64,6 @@ CREATE TABLE ProcessedMessages
 	MessageBody XML NOT NULL,
 	ServiceName NVARCHAR(MAX) NOT NULL
 )
-GO
-
--- These settings are needed, so that the activated stored procedure works...
--- Otherwise we get an error, and the queue is finally deactivated, because of the poison message handling.
-SET ANSI_WARNINGS ON
-GO
-
-SET ANSI_PADDING ON
-GO
-
-SET QUOTED_IDENTIFIER ON
 GO
 
 -- Create a stored procedure that processes the incoming request messages
