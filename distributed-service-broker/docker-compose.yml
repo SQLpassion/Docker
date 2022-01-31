@@ -1,6 +1,8 @@
 version: '3.7'
 services:
   initiator-service:
+    build:
+      context: initiator-service/.
     restart: on-failure
     networks:
       - localnet
@@ -12,6 +14,8 @@ services:
     env_file:
       - initiator-service/sql/sapassword.env
   target-service:
+    build:
+      context: target-service/.
     restart: on-failure
     networks:
       - localnet

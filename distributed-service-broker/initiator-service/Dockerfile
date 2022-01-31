@@ -30,5 +30,5 @@ LABEL org.opencontainers.image.vendor="SQLpassion"
 LABEL org.opencontainers.image.title="SQLpassion"
 LABEL org.opencontainers.image.url=https://www.sqlpassion.at
 LABEL org.opencontainers.image.version=1.0
-LABEL org.label-schema.description="SQL Server instance with some sample databases."
+LABEL org.label-schema.description="SQL Server instance with a Service Broker Initiator Service."
 LABEL org.opencontainers.image.authors="Klaus Aschenbrenner <klaus.aschenbrenner@sqlpassion.at>"

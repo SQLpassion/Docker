@@ -7,6 +7,9 @@ RECEIVE TOP(1)
 				* 
 				FROM TargetQueue
 
+select @@version
+
+
 -- Send a response message back to the service "InitiatorService"
 DECLARE @ch UNIQUEIDENTIFIER
 DECLARE @messagetypename NVARCHAR(256)

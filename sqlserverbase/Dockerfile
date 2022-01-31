@@ -11,7 +11,7 @@ RUN chown mssql /tmp
 # Copy the scripts and the sample databases into the image
 COPY sql /tmp/
 COPY scripts /tmp/
-COPY sample-databases /tmp/
+# COPY sample-databases /tmp/
 
 # Mark the scripts as executable
 RUN chmod +x /tmp/*.sh
