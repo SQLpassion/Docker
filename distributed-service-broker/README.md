@@ -1,4 +1,4 @@
-# Docker
+# Distributed Service Broker application
 
 This repository contains a fully distributed Service Broker application deployed through Docker Compose.
 
@@ -27,7 +27,7 @@ GO
 
 EXEC SendMessageToTargetService
 '<HelloWorldRequest>
-		Klaus Aschenbrenner
+	Klaus Aschenbrenner
 </HelloWorldRequest>'
 GO
 ```
@@ -45,5 +45,5 @@ GO
 ```
 The whole messages, which are exchanged between both Service Broker services, are processed by the following activated stored procedures:
 
-*) InitiatorService.dbo.ProcessResponseMessages
-*) TargetService.dbo.ProcessRequestMessages
+- `InitiatorService.dbo.ProcessResponseMessages`
+- `TargetService.dbo.ProcessRequestMessages`
